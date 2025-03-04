@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Westlake Ward Map</title>
   
-  <!-- Leaflet CSS (Map Library) -->
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
   <style>
@@ -73,7 +73,7 @@
       padding: 6px 12px;
       font-size: 14px;
       border-radius: 5px;
-      color: white;
+      color: white; /* Fix: Text is now white */
       background: #3c9a3c;
       transition: 0.3s;
     }
@@ -93,9 +93,9 @@
   <!-- Map Container -->
   <div id="map"></div>
 
-  <!-- Leaflet JS -->
+  <!-- Leaflet & Turf.js -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/@turf/turf"></script> <!-- Turf.js for spatial analysis -->
+  <script src="https://unpkg.com/@turf/turf"></script>
 
   <script>
     // Initialize Map
@@ -154,6 +154,11 @@
         const userCoords = [position.coords.longitude, position.coords.latitude];
         let userPoint = turf.point(userCoords);
 
+        // Drop user location pin
+        let userMarker = L.marker([userCoords[1], userCoords[0]]).addTo(map)
+          .bindPopup("<b>You are here</b>").openPopup();
+
+        // Check which ward contains the user
         let foundWard = wardLayer.toGeoJSON().features.find(feature => {
           return turf.booleanPointInPolygon(userPoint, feature.geometry);
         });
@@ -161,7 +166,14 @@
         if (foundWard) {
           let wardNum = foundWard.properties.Ward;
           let member = councilMembers[wardNum];
-          alert(`You are in Ward ${wardNum}, represented by ${member.name}.`);
+
+          // Find ward layer and trigger popup
+          wardLayer.eachLayer(layer => {
+            if (layer.feature.properties.Ward == wardNum) {
+              layer.openPopup();
+            }
+          });
+
         } else {
           alert("You are not in a defined ward area.");
         }
