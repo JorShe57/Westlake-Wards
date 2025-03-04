@@ -129,6 +129,16 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // Assign a different color to each ward
+    const wardColors = {
+      "1": "#FF5733",  // Red-Orange
+      "2": "#33A1FF",  // Blue
+      "3": "#33FF57",  // Green
+      "4": "#FF33A8",  // Pink
+      "5": "#FFC300",  // Yellow
+      "6": "#A833FF"   // Purple
+    };
+
     // Council Members Data
     const councilMembers = {
       "1": { name: "Duane Van Dyke", email: "dvandyke@cityofwestlake.org", phone: "4402411817", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291769/e53aec77-39bc-4dd1-9073-522ab4198351.jpeg" },
@@ -145,7 +155,11 @@
       .then(res => res.json())
       .then(data => {
         wardLayer = L.geoJSON(data, {
-          style: { color: "blue", weight: 2, fillOpacity: 0.2 },
+          style: feature => ({
+            color: wardColors[feature.properties.Ward] || "blue", // Assign color
+            weight: 2,
+            fillOpacity: 0.3
+          }),
           onEachFeature: (feature, layer) => {
             let wardNum = feature.properties.Ward;
             if (councilMembers[wardNum]) {
@@ -171,28 +185,15 @@
       const btnText = document.getElementById("btn-text");
       const spinner = document.getElementById("loading-spinner");
 
-      // Start Loading Animation
       btnText.textContent = "Finding...";
       spinner.style.display = "inline-block";
 
-      if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser.");
-        return;
-      }
-
       navigator.geolocation.getCurrentPosition(position => {
-        // Stop Loading Animation
         btnText.textContent = "Find My Ward";
         spinner.style.display = "none";
 
         const userCoords = [position.coords.longitude, position.coords.latitude];
         let userPoint = turf.point(userCoords);
-
-        if (window.userMarker) {
-          map.removeLayer(window.userMarker);
-        }
-
-        window.userMarker = L.marker([userCoords[1], userCoords[0]]).addTo(map);
 
         let foundWard = wardLayer.toGeoJSON().features.find(feature => turf.booleanPointInPolygon(userPoint, feature.geometry));
 
@@ -202,9 +203,6 @@
               layer.openPopup();
             }
           });
-          map.setView([userCoords[1], userCoords[0]], 14);
-        } else {
-          alert("You are not in a defined ward area.");
         }
       });
     });
