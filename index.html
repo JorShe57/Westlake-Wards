@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
   <style>
-    /* General Styles */
     body {
       font-family: Arial, sans-serif;
       text-align: center;
@@ -20,15 +19,20 @@
     #map {
       height: 80vh;
       width: 100%;
+      position: relative;
+    }
+
+    /* Button Container */
+    .button-container {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
     }
 
     /* Find My Ward Button */
     #find-ward-btn {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
       background-color: #3c9a3c;
       color: white;
       padding: 10px 15px;
@@ -39,7 +43,7 @@
       box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.2);
       transition: background 0.3s ease;
     }
-    
+
     #find-ward-btn:hover {
       background-color: #2a7a2a;
     }
@@ -49,18 +53,12 @@
       text-align: center;
       font-size: 14px;
     }
-    
+
     .popup-content img {
       width: 80px;
       height: 80px;
       border-radius: 50%;
       margin-bottom: 10px;
-    }
-
-    .popup-content h2 {
-      margin: 5px 0;
-      font-size: 18px;
-      color: #333;
     }
 
     .popup-buttons {
@@ -88,20 +86,22 @@
 <body>
 
   <!-- "Find My Ward" Button -->
-  <button id="find-ward-btn">Find My Ward</button>
+  <div class="button-container">
+    <button id="find-ward-btn" disabled>Find My Ward</button>
+  </div>
 
   <!-- Map Container -->
   <div id="map"></div>
 
-  <!-- Leaflet JS (Map Library) -->
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/@turf/turf"></script> <!-- Turf.js for spatial analysis -->
 
   <script>
-    // Map Initialization
+    // Initialize Map
     const map = L.map('map').setView([41.445, -81.926], 12);
 
-    // Base Map Layer
+    // Base Layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
@@ -116,7 +116,6 @@
       "6": { name: "Mark Getsay", email: "mgetsay@cityofwestlake.org", phone: "4403607418", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291991/b7a9d23f-e632-44be-a14a-5ce88659d9cd.jpeg" }
     };
 
-    // Load GeoJSON Ward Data
     let wardLayer;
     fetch("https://raw.githubusercontent.com/JorShe57/Westlake-Wards/main/wards.geojson")
       .then(res => res.json())
@@ -141,19 +140,23 @@
             }
           }
         }).addTo(map);
+
+        document.getElementById("find-ward-btn").disabled = false; // Enable button when GeoJSON loads
       });
 
-    // Find My Ward Functionality
     document.getElementById("find-ward-btn").addEventListener("click", () => {
-      navigator.geolocation.getCurrentPosition(pos => {
-        const userCoords = [pos.coords.longitude, pos.coords.latitude];
-        let userPoint = turf.point(userCoords);
-        let userMarker = L.marker([userCoords[1], userCoords[0]]).addTo(map)
-          .bindPopup("<b>You are here</b>").openPopup();
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+      }
 
-        let foundWard = wardLayer.toGeoJSON().features.find(feature =>
-          turf.booleanPointInPolygon(userPoint, feature.geometry)
-        );
+      navigator.geolocation.getCurrentPosition(position => {
+        const userCoords = [position.coords.longitude, position.coords.latitude];
+        let userPoint = turf.point(userCoords);
+
+        let foundWard = wardLayer.toGeoJSON().features.find(feature => {
+          return turf.booleanPointInPolygon(userPoint, feature.geometry);
+        });
 
         if (foundWard) {
           let wardNum = foundWard.properties.Ward;
@@ -162,9 +165,12 @@
         } else {
           alert("You are not in a defined ward area.");
         }
-      }, () => alert("Geolocation permission denied."));
-    });
-  </script>
 
+      }, error => {
+        alert("Unable to retrieve location. Make sure location access is allowed.");
+      });
+    });
+
+  </script>
 </body>
 </html>
