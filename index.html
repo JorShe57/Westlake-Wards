@@ -141,7 +141,7 @@
           }
         }).addTo(map);
 
-        document.getElementById("find-ward-btn").disabled = false; // Enable button when GeoJSON loads
+        document.getElementById("find-ward-btn").disabled = false;
       });
 
     document.getElementById("find-ward-btn").addEventListener("click", () => {
@@ -155,8 +155,7 @@
         let userPoint = turf.point(userCoords);
 
         // Drop user location pin
-        let userMarker = L.marker([userCoords[1], userCoords[0]]).addTo(map)
-          .bindPopup("<b>You are here</b>").openPopup();
+        let userMarker = L.marker([userCoords[1], userCoords[0]]).addTo(map);
 
         // Check which ward contains the user
         let foundWard = wardLayer.toGeoJSON().features.find(feature => {
@@ -175,8 +174,15 @@
           });
 
           userMarker.bindPopup(`
-            <b>You are in Ward ${wardNum}</b><br>
-            <strong>${member.name}</strong>
+            <div class="popup-content">
+              <img src="${member.img}" alt="${member.name}">
+              <h2>${member.name}</h2>
+              <h3>Ward ${wardNum}</h3>
+              <div class="popup-buttons">
+                <a href="mailto:${member.email}">Email</a>
+                <a href="tel:${member.phone}">Call</a>
+              </div>
+            </div>
           `).openPopup();
         } else {
           userMarker.bindPopup("You are not in a defined ward area.").openPopup();
