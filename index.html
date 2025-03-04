@@ -38,10 +38,29 @@
       cursor: pointer;
       box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.2);
       transition: background 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     
     #find-ward-btn:hover {
       background-color: #2a7a2a;
+    }
+
+    /* Spinner Styles */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none; /* Hidden by default */
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     /* Popup Styling */
@@ -88,7 +107,10 @@
 <body>
 
   <!-- "Find My Ward" Button -->
-  <button id="find-ward-btn">Find My Ward</button>
+  <button id="find-ward-btn">
+    <span id="btn-text">Find My Ward</span>
+    <div class="spinner" id="loading-spinner"></div>
+  </button>
 
   <!-- Map Container -->
   <div id="map"></div>
@@ -145,44 +167,43 @@
 
     // Find My Ward Functionality
     document.getElementById("find-ward-btn").addEventListener("click", () => {
-        if (!navigator.geolocation) {
-            alert("Geolocation is not supported by your browser.");
-            return;
+      const btnText = document.getElementById("btn-text");
+      const spinner = document.getElementById("loading-spinner");
+
+      btnText.textContent = "Finding...";
+      spinner.style.display = "inline-block";
+
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(position => {
+        btnText.textContent = "Find My Ward";
+        spinner.style.display = "none";
+
+        const userCoords = [position.coords.longitude, position.coords.latitude];
+        let userPoint = turf.point(userCoords);
+
+        if (window.userMarker) {
+          map.removeLayer(window.userMarker);
         }
 
-        navigator.geolocation.getCurrentPosition(position => {
-            const userCoords = [position.coords.longitude, position.coords.latitude];  
-            let userPoint = turf.point(userCoords);
+        window.userMarker = L.marker([userCoords[1], userCoords[0]]).addTo(map);
 
-            // Remove previous marker
-            if (window.userMarker) {
-                map.removeLayer(window.userMarker);
+        let foundWard = wardLayer.toGeoJSON().features.find(feature => turf.booleanPointInPolygon(userPoint, feature.geometry));
+
+        if (foundWard) {
+          wardLayer.eachLayer(layer => {
+            if (layer.feature.properties.Ward == foundWard.properties.Ward) {
+              layer.openPopup();
             }
-
-            // Add marker at user's location
-            window.userMarker = L.marker([userCoords[1], userCoords[0]]).addTo(map);
-
-            let foundWard = wardLayer.toGeoJSON().features.find(feature => {
-                return turf.booleanPointInPolygon(userPoint, feature.geometry);
-            });
-
-            if (foundWard) {
-                let wardNum = foundWard.properties.Ward;
-                let member = councilMembers[wardNum];
-
-                wardLayer.eachLayer(layer => {
-                    if (layer.feature.properties.Ward == wardNum) {
-                        layer.openPopup();
-                    }
-                });
-
-                map.setView([userCoords[1], userCoords[0]], 14);
-            } else {
-                alert("You are not in a defined ward area.");
-            }
-        }, error => {
-            alert("Unable to retrieve location. Make sure location access is allowed.");
-        });
+          });
+          map.setView([userCoords[1], userCoords[0]], 14);
+        } else {
+          alert("You are not in a defined ward area.");
+        }
+      });
     });
   </script>
 
