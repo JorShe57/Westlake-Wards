@@ -4,162 +4,166 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Westlake Ward Map</title>
-
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Leaflet CSS (Map Library) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
   <style>
+    /* General Styles */
     body {
-      font-family: 'Poppins', sans-serif;
-      margin: 0;
-      padding: 0;
+      font-family: Arial, sans-serif;
       text-align: center;
-      background-color: #f4f4f4;
+      margin: 0;
     }
+    
+    /* Map Styles */
     #map {
-      height: 600px;
+      height: 80vh;
       width: 100%;
-      margin-top: 20px;
     }
-    .find-ward-btn {
+
+    /* Find My Ward Button */
+    #find-ward-btn {
       position: absolute;
-      top: 20px;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
+      z-index: 1000;
       background-color: #3c9a3c;
       color: white;
-      padding: 10px 20px;
-      font-size: 16px;
+      padding: 10px 15px;
       border: none;
+      border-radius: 8px;
+      font-size: 16px;
       cursor: pointer;
-      border-radius: 5px;
-      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.2);
+      transition: background 0.3s ease;
     }
-    .find-ward-btn:hover {
-      background-color: #1e6b1e;
+    
+    #find-ward-btn:hover {
+      background-color: #2a7a2a;
     }
-    .leaflet-popup-content {
+
+    /* Popup Styling */
+    .popup-content {
       text-align: center;
+      font-size: 14px;
     }
-    .popup-img {
+    
+    .popup-content img {
       width: 80px;
       height: 80px;
       border-radius: 50%;
-      object-fit: cover;
       margin-bottom: 10px;
     }
-    .popup-btn {
-      display: inline-block;
-      background: #3c9a3c;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 5px;
-      margin: 5px;
-      text-decoration: none;
-      font-weight: bold;
+
+    .popup-content h2 {
+      margin: 5px 0;
+      font-size: 18px;
+      color: #333;
     }
-    .popup-btn:hover {
-      background: #1e6b1e;
+
+    .popup-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .popup-buttons a {
+      text-decoration: none;
+      padding: 6px 12px;
+      font-size: 14px;
+      border-radius: 5px;
+      color: white;
+      background: #3c9a3c;
+      transition: 0.3s;
+    }
+
+    .popup-buttons a:hover {
+      background: #2a7a2a;
     }
   </style>
 </head>
 <body>
 
-  <button class="find-ward-btn" onclick="locateUser()">Find My Ward</button>
+  <!-- "Find My Ward" Button -->
+  <button id="find-ward-btn">Find My Ward</button>
+
+  <!-- Map Container -->
   <div id="map"></div>
 
-  <!-- Leaflet & Turf.js -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+  <!-- Leaflet JS (Map Library) -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@turf/turf"></script> <!-- Turf.js for spatial analysis -->
 
   <script>
     // Map Initialization
     const map = L.map('map').setView([41.445, -81.926], 12);
 
-    // Add Tile Layer
+    // Base Map Layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Council Representatives Data
-    const representatives = {
-      "1": { name: "Duane Van Dyke", phone: "tel:4402411817", email: "mailto:dvandyke@cityofwestlake.org", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291769/e53aec77-39bc-4dd1-9073-522ab4198351.jpeg" },
-      "2": { name: "Nick Nunnari", phone: "tel:4402632215", email: "mailto:nnunnari@cityofwestlake.org", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291783/faababc0-db81-452f-ac9c-f582ddcb5164.jpeg" },
-      "3": { name: "Dennis Sullivan", phone: "tel:4408358661", email: "mailto:dsullivan@cityofwestlake.org", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291965/896c1717-e64f-41ba-8621-799a8f3edf40.jpeg" },
-      "4": { name: "Michael O'Donnell", phone: "tel:4407810257", email: "mailto:modonnell@cityofwestlake.org", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291971/a1957baf-0641-4d89-9f90-0a57503cc391.jpeg" },
-      "5": { name: "Amy Havelka", phone: "tel:4404826800", email: "mailto:ahavelka@cityofwestlake.org", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291983/c95be0eb-1694-4275-89fa-6a08038961b3.jpeg" },
-      "6": { name: "Mark Getsay", phone: "tel:4403607418", email: "mailto:mgetsay@cityofwestlake.org", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291991/b7a9d23f-e632-44be-a14a-5ce88659d9cd.jpeg" }
+    // Council Members Data
+    const councilMembers = {
+      "1": { name: "Duane Van Dyke", email: "dvandyke@cityofwestlake.org", phone: "4402411817", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291769/e53aec77-39bc-4dd1-9073-522ab4198351.jpeg" },
+      "2": { name: "Nick Nunnari", email: "nnunnari@cityofwestlake.org", phone: "4402632215", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291783/faababc0-db81-452f-ac9c-f582ddcb5164.jpeg" },
+      "3": { name: "Dennis Sullivan", email: "dsullivan@cityofwestlake.org", phone: "4408358661", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291965/896c1717-e64f-41ba-8621-799a8f3edf40.jpeg" },
+      "4": { name: "Michael O'Donnell", email: "modonnell@cityofwestlake.org", phone: "4407810257", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291971/a1957baf-0641-4d89-9f90-0a57503cc391.jpeg" },
+      "5": { name: "Amy Havelka", email: "ahavelka@cityofwestlake.org", phone: "4404826800", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291983/c95be0eb-1694-4275-89fa-6a08038961b3.jpeg" },
+      "6": { name: "Mark Getsay", email: "mgetsay@cityofwestlake.org", phone: "4403607418", img: "https://cmsv2-assets.apptegy.net/uploads/27369/file/4291991/b7a9d23f-e632-44be-a14a-5ce88659d9cd.jpeg" }
     };
 
-    let geojsonLayer;
-
-    // Load GeoJSON File
-    fetch('https://raw.githubusercontent.com/JorShe57/Westlake-Wards/main/wards.geojson')
-      .then(response => response.json())
+    // Load GeoJSON Ward Data
+    let wardLayer;
+    fetch("https://raw.githubusercontent.com/JorShe57/Westlake-Wards/main/wards.geojson")
+      .then(res => res.json())
       .then(data => {
-        console.log("GeoJSON Data Loaded:", data);
-
-        geojsonLayer = L.geoJSON(data, {
+        wardLayer = L.geoJSON(data, {
           style: { color: "blue", weight: 2, fillOpacity: 0.2 },
-          onEachFeature: function (feature, layer) {
-            let wardNumber = feature.properties.Ward;
-            let rep = representatives[wardNumber] || { name: "Unknown", img: "", phone: "#", email: "#" };
-
-            let popupContent = `
-              <img src="${rep.img}" class="popup-img">
-              <h3><b>${rep.name}</b></h3>
-              <p>Ward ${wardNumber}</p>
-              <a href="${rep.email}" class="popup-btn">Email</a>
-              <a href="${rep.phone}" class="popup-btn">Call</a>
-            `;
-            layer.bindPopup(popupContent);
+          onEachFeature: (feature, layer) => {
+            let wardNum = feature.properties.Ward;
+            if (councilMembers[wardNum]) {
+              let member = councilMembers[wardNum];
+              layer.bindPopup(`
+                <div class="popup-content">
+                  <img src="${member.img}" alt="${member.name}">
+                  <h2>${member.name}</h2>
+                  <h3>Ward ${wardNum}</h3>
+                  <div class="popup-buttons">
+                    <a href="mailto:${member.email}">Email</a>
+                    <a href="tel:${member.phone}">Call</a>
+                  </div>
+                </div>
+              `);
+            }
           }
         }).addTo(map);
       });
 
-    // Locate User and Find Ward
-    function locateUser() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(position => {
-          const userLatLng = [position.coords.longitude, position.coords.latitude];
+    // Find My Ward Functionality
+    document.getElementById("find-ward-btn").addEventListener("click", () => {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const userCoords = [pos.coords.longitude, pos.coords.latitude];
+        let userPoint = turf.point(userCoords);
+        let userMarker = L.marker([userCoords[1], userCoords[0]]).addTo(map)
+          .bindPopup("<b>You are here</b>").openPopup();
 
-          let foundWard = geojsonLayer.toGeoJSON().features.find(ward => {
-            return turf.booleanPointInPolygon(turf.point(userLatLng), ward.geometry);
-          });
+        let foundWard = wardLayer.toGeoJSON().features.find(feature =>
+          turf.booleanPointInPolygon(userPoint, feature.geometry)
+        );
 
-          if (foundWard) {
-            let wardNumber = foundWard.properties.Ward;
-            let rep = representatives[wardNumber];
-
-            let popupContent = `
-              <img src="${rep.img}" class="popup-img">
-              <h3><b>${rep.name}</b></h3>
-              <p>Ward ${wardNumber}</p>
-              <a href="${rep.email}" class="popup-btn">Email</a>
-              <a href="${rep.phone}" class="popup-btn">Call</a>
-            `;
-
-            L.popup()
-              .setLatLng([position.coords.latitude, position.coords.longitude])
-              .setContent(popupContent)
-              .openOn(map);
-          } else {
-            alert("You are not in a defined ward area.");
-          }
-
-          // Add User Marker
-          L.marker([position.coords.latitude, position.coords.longitude])
-            .addTo(map)
-            .bindPopup("You are here")
-            .openPopup();
-
-        }, () => {
-          alert("Geolocation failed. Please enable location services and try again.");
-        });
-      } else {
-        alert("Geolocation is not supported by your browser.");
-      }
-    }
+        if (foundWard) {
+          let wardNum = foundWard.properties.Ward;
+          let member = councilMembers[wardNum];
+          alert(`You are in Ward ${wardNum}, represented by ${member.name}.`);
+        } else {
+          alert("You are not in a defined ward area.");
+        }
+      }, () => alert("Geolocation permission denied."));
+    });
   </script>
 
 </body>
