@@ -51,8 +51,8 @@
     }
     
     .popup-content img {
-      width: 100px;
-      height: 100px;
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
       margin-bottom: 10px;
     }
@@ -93,15 +93,15 @@
   <!-- Map Container -->
   <div id="map"></div>
 
-  <!-- Leaflet JS -->
+  <!-- Leaflet & Turf.js -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/@turf/turf"></script> <!-- Turf.js for spatial analysis -->
+  <script src="https://unpkg.com/@turf/turf"></script>
 
   <script>
-    // Map Initialization
+    // Initialize Map
     const map = L.map('map').setView([41.445, -81.926], 12);
 
-    // Base Map Layer
+    // Add Base Map Layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
@@ -143,50 +143,46 @@
         }).addTo(map);
       });
 
-    // Find My Ward Button Click
+    // Find My Ward Functionality
     document.getElementById("find-ward-btn").addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser.");
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(position => {
-        const userCoords = [position.coords.longitude, position.coords.latitude];
-        let userPoint = turf.point(userCoords);
-
-        // Remove existing marker if it exists
-        if (window.userMarker) map.removeLayer(window.userMarker);
-
-        // Add user location marker
-        window.userMarker = L.marker([userCoords[1], userCoords[0]]).addTo(map);
-
-        // Check which ward contains the user's location
-        let foundWard = wardLayer.toGeoJSON().features.find(feature =>
-          turf.booleanPointInPolygon(userPoint, feature.geometry)
-        );
-
-        if (foundWard) {
-          let wardNum = foundWard.properties.Ward;
-          let member = councilMembers[wardNum];
-
-          // Open the correct council member's popup
-          window.userMarker.bindPopup(`
-            <div class="popup-content">
-              <img src="${member.img}" alt="${member.name}">
-              <h2>${member.name}</h2>
-              <h3>Ward ${wardNum}</h3>
-              <div class="popup-buttons">
-                <a href="mailto:${member.email}">Email</a>
-                <a href="tel:${member.phone}">Call</a>
-              </div>
-            </div>
-          `).openPopup();
-        } else {
-          alert("You are not in a defined ward area.");
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.");
+            return;
         }
-      }, error => {
-        alert("Unable to retrieve location. Make sure location access is allowed.");
-      });
+
+        navigator.geolocation.getCurrentPosition(position => {
+            const userCoords = [position.coords.longitude, position.coords.latitude];  
+            let userPoint = turf.point(userCoords);
+
+            // Remove previous marker
+            if (window.userMarker) {
+                map.removeLayer(window.userMarker);
+            }
+
+            // Add marker at user's location
+            window.userMarker = L.marker([userCoords[1], userCoords[0]]).addTo(map);
+
+            let foundWard = wardLayer.toGeoJSON().features.find(feature => {
+                return turf.booleanPointInPolygon(userPoint, feature.geometry);
+            });
+
+            if (foundWard) {
+                let wardNum = foundWard.properties.Ward;
+                let member = councilMembers[wardNum];
+
+                wardLayer.eachLayer(layer => {
+                    if (layer.feature.properties.Ward == wardNum) {
+                        layer.openPopup();
+                    }
+                });
+
+                map.setView([userCoords[1], userCoords[0]], 14);
+            } else {
+                alert("You are not in a defined ward area.");
+            }
+        }, error => {
+            alert("Unable to retrieve location. Make sure location access is allowed.");
+        });
     });
   </script>
 
