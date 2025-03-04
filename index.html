@@ -126,32 +126,23 @@
 
         let wardLayer;
 
-        // Load GeoJSON and add to map
         fetch('https://raw.githubusercontent.com/JorShe57/Westlake-Wards/main/wards.geojson')
-            .then(response => response.json())
-            .then(data => {
-                wardLayer = L.geoJSON(data, {
-                    style: { color: "#3388ff", weight: 2, fillOpacity: 0.3 },
-                    onEachFeature: function (feature, layer) {
-                        let wardNum = feature.properties.Ward ? feature.properties.Ward.toString() : "Unknown";
-                        let rep = representatives[wardNum];
+    .then(response => response.json())
+    .then(data => {
+        console.log("GeoJSON Data Loaded:", data); // Check GeoJSON Structure
 
-                        if (rep) {
-                            layer.bindPopup(`
-                                <div class="popup-content">
-                                    <img src="${rep.image}" class="popup-img">
-                                    <div class="popup-title">${rep.name}</div>
-                                    <div class="popup-info"><b>Ward ${wardNum}</b></div>
-                                    <div class="popup-links">
-                                        <a href="mailto:${rep.email}">Email</a>
-                                        <a href="tel:${rep.phone}">Call</a>
-                                    </div>
-                                </div>
-                            `);
-                        }
-                    }
-                }).addTo(map);
-            });
+        let foundWard = data.features.find(ward => {
+            console.log("Testing Ward:", ward.properties.Ward, ward.geometry);
+            return turf.booleanPointInPolygon(turf.point(userLatLng), ward.geometry);
+        });
+
+        if (foundWard) {
+            alert(`You are in Ward ${foundWard.properties.Ward}`);
+        } else {
+            alert("You are not in a defined ward area.");
+        }
+    });
+
 
         // Locate User and Determine Ward
         function locateUser() {
