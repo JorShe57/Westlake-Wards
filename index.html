@@ -15,23 +15,89 @@
     <div id="wardMap"></div>
 
     <script>
+        // Mapping ward numbers to representatives
+        const representatives = {
+            "1": "Duane Van Dyke",
+            "2": "Nick Nunnari",
+            "3": "Dennis Sullivan",
+            "4": "Michael O'Donnell",
+            "5": "Amy Havelka",
+            "6": "Mark Getsay"
+        };
+
+        // Initialize the map
         var map = L.map('wardMap').setView([41.456, -81.917], 12);
+
+        // Add a base layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
+        // Load the GeoJSON file
         fetch('https://raw.githubusercontent.com/JorShe57/Westlake-Wards/main/wards.geojson')
             .then(response => response.json())
             .then(data => {
                 L.geoJSON(data, {
                     style: { color: "#3388ff", weight: 2, fillOpacity: 0.3 },
                     onEachFeature: function (feature, layer) {
-                        let wardNum = feature.properties.ward_number || "Unknown";
-                        let repName = feature.properties.representative || "No Data";
+                        let wardNum = feature.properties.Ward ? feature.properties.Ward.toString() : "Unknown";
+                        let repName = representatives[wardNum] || "No Data";
+                        
                         layer.bindPopup(`<b>Ward ${wardNum}</b><br>Representative: ${repName}`);
                     }
                 }).addTo(map);
+            })
+            .catch(error => console.error("Error loading GeoJSON:", error));
+
+        // Function to locate user and determine their ward
+        function locateUser() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(position => {
+                var userLatLng = [position.coords.latitude, position.coords.longitude];
+
+                // Add a marker for the user's location
+                var userMarker = L.marker(userLatLng).addTo(map)
+                    .bindPopup("You are here").openPopup();
+
+                // Check which ward the user is in
+                fetch('https://raw.githubusercontent.com/JorShe57/Westlake-Wards/main/wards.geojson')
+                    .then(response => response.json())
+                    .then(data => {
+                        let foundWard = null;
+
+                        data.features.forEach(ward => {
+                            if (turf.booleanPointInPolygon(turf.point(userLatLng), ward)) {
+                                foundWard = ward;
+                            }
+                        });
+
+                        if (foundWard) {
+                            let wardNum = foundWard.properties.Ward ? foundWard.properties.Ward.toString() : "Unknown";
+                            let repName = representatives[wardNum] || "No Data";
+                            alert(`You are in Ward ${wardNum}. Representative: ${repName}`);
+                        } else {
+                            alert("You are not in a defined ward area.");
+                        }
+                    });
             });
+        }
+
+        // Add a button to trigger geolocation
+        var locateButton = L.control({ position: 'topright' });
+        locateButton.onAdd = function () {
+            var btn = L.DomUtil.create('button', '');
+            btn.innerHTML = "Find My Ward";
+            btn.style.padding = "8px";
+            btn.style.background = "white";
+            btn.style.cursor = "pointer";
+            btn.onclick = locateUser;
+            return btn;
+        };
+        locateButton.addTo(map);
     </script>
 </body>
 </html>
