@@ -73,7 +73,7 @@
       padding: 6px 12px;
       font-size: 14px;
       border-radius: 5px;
-      color: white; /* Fix: Text is now white */
+      color: white;
       background: #3c9a3c;
       transition: 0.3s;
     }
@@ -174,8 +174,12 @@
             }
           });
 
+          userMarker.bindPopup(`
+            <b>You are in Ward ${wardNum}</b><br>
+            <strong>${member.name}</strong>
+          `).openPopup();
         } else {
-          alert("You are not in a defined ward area.");
+          userMarker.bindPopup("You are not in a defined ward area.").openPopup();
         }
 
       }, error => {
